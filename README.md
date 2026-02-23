@@ -4,20 +4,6 @@
 
 ---
 
-**Architecture Diagram (placeholder)**
-
-![Architecture diagram placeholder](docs/architecture-diagram.png)
-
-Replace the image above with a diagram showing the following components and connections:
-- PostgreSQL (source)
-- Debezium connector
-- Kafka (topics)
-- Consumers (Spark streaming / Kafka Connect sinks)
-- Delta Lake storage (Bronze/Silver/Gold folders)
-- Downstream analytics / BI tools
-
----
-
 ## Tech Stack
 
 - PostgreSQL — transactional OLTP source
