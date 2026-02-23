@@ -1,0 +1,45 @@
+# Create docker-compose file to orchestrate all services
+
+version: "3.8" # Specifies which version of the Docker Compose file format to use
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.8.3 # Downloads and uses the Confluent Kafka Docker Image, version 7.8.3
+    container_name: kafka
+    ports:
+      - "9092:9092" # Maps port 9092 on laptop to port 9092 inside the container; Spark on laptop can reach Kafka through port 9092
+    environment:
+      KAFKA_KRAFT_MODE: 'true'
+      CLUSTER_ID: '1L6g7nGhU-eAKfL--X25wl' # Unique cluster ID required for KRaft mode
+      KAFKA_NODE_ID: 1 # Identifies this specific Kafka broker in the cluster; always 1 for single broker; if multiple brokers, each one has a different ID
+      KAFKA_PROCESS_ROLES: broker, controller # Defines what roles this Kafka node plays; broker handles data, and controller handles cluster metadata; node does both jobs
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093 # Lists which nodes participate in the controller election; in KRaft mode, controllers vote on who is th leader
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER # Names the listener used for controller communication
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092, CONTROLLER://0.0.0.0:9093 # Defines which ports Kafka listens to inside the container
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://host.docker.internal:9092 # Tells clients how to connect to Kafka
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT, PLAINTEXT:PLAINTEXT # Maps listener names to security protocols; development - plaintext sufficient
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT # Specifies which listener brokers use to talk to each other
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # Sets replication factor for internal topics; single broker means replication factor of 1; in production, use at least 3 brokers
+      KAFKA_LOG_DIRS: /var/lib/kafka/data # Directory inside container where Kafka stores its data
+    volumes: # Mounts a Docker volume to persist Kafka data outside the container lifecycle
+      - kafka_kraft:/var/lib/kafka/data
+    
+  debezium:
+    image: debezium/connect:2.4 # Use official Debezium Kafka Connect Image, version 2.4; includes Kafka Conect + Debezium connectors for PostgreSQL, MySQL, MongoDB, etc
+    container_name: debezium
+    depends_on:
+      - kafka # Tells Docker compose to start Kafka before starting Debezium; Debezium needs to connect to Kafka, so Kafka must be running first
+    ports: 
+      - "8083:8083" 
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092 # Tells Debezium where Kafka is
+      GROUP_ID: 1 # Sets up consumer group ID for this Kafka Connect cluster
+      CONFIG_STORAGE_TOPIC: debezium_configs # Names the Kafka topic where the Debezium stores connector configurations; Debezium stores connector settings in Kafka so they survive restarts
+      OFFSET_STORAGE_TOPIC: debezium_offsets # Names the Kafka topic where Debezium tracks which database changes it has already processed; if absent, Debezium resends all CDC events on restart
+      STATUS_STORAGE_TOPIC: debezium_statuses # Names the Kafka topic where Debezium stores connector status information
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1 # Set replication factor for topic; single node - cannot replicate
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+
+volumes: # Creates a Docker volume named 'kafka_kraft'
+  kafka_kraft:
