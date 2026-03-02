@@ -166,7 +166,6 @@ If you need help debugging, run the failing command with verbose logs and share 
 
 ## Future Improvements (ideas for portfolio)
 
-- Add `requirements.txt` and automated environment setup scripts
 - Convert batch Spark jobs to Structured Streaming for near-real-time processing
 - Add automated tests for data generation and transformation logic
 - Add CI workflow to run linting and unit tests
