@@ -1,7 +1,7 @@
 # CDC Data Pipeline — Medallion Pattern (Portfolio Project)
 
- A professional, end-to-end demonstration of a CDC-enabled data pipeline implementing the Medallion architecture (Bronze → Silver → Gold). Uses Debezium and Kafka for change-data-capture, PostgreSQL as the source, PySpark for transformations, and Delta-style storage for the data lake. Designed as a portfolio project to illustrate design, implementation, and operational considerations.
-
+ A professional, end-to-end demonstration of a CDC-enabled data pipeline implementing the Medallion architecture (Bronze → Silver → Gold). Uses Debezium and Kafka for change-data-capture, PostgreSQL as the source, PySpark for transformations, and Delta-style storage for the data lake. 
+ 
 ---
 
 ## Tech Stack
@@ -164,7 +164,7 @@ If you need help debugging, run the failing command with verbose logs and share 
 
 ---
 
-## Future Improvements (ideas for portfolio)
+## Future Improvements
 
 - Convert batch Spark jobs to Structured Streaming for near-real-time processing
 - Add automated tests for data generation and transformation logic
@@ -190,10 +190,6 @@ Be sure to include tests for any new transformation logic and update the README 
 This project is released under the MIT License. See `LICENSE` for details.
 
 ---
-
-## Contact
-
-Project author: Your Name — set your professional contact info here.
 
 - Email: eolagbaiye212@gmail.com
 - LinkedIn: https://www.linkedin.com/in/emmanuel-olagbaiye
