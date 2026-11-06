@@ -54,7 +54,11 @@ python -m venv .venv
 pip install pyspark delta-spark psycopg2-binary python-dotenv faker pandas requests
 ```
 
-3. Create the source tables by running `create_schema.sql` against your PostgreSQL database.
+3. Create the source database and tables by running `create_schema.sql` with `psql`. The script creates a `retail_db` database, connects to it, and builds the tables and indexes:
+
+```powershell
+psql -U postgres -f create_schema.sql
+```
 
 4. Copy `.env.example` to `.env` and fill in your database credentials (see Configuration).
 
