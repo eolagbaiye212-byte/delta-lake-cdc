@@ -28,9 +28,11 @@
 ## Prerequisites
 
 - Windows, macOS, or Linux with sufficient CPU/RAM to run Docker and Spark
-- Python 3.10+ (project includes a `myenv` venv for convenience)
+- Python 3.10+
 - Docker & Docker Compose
+- PostgreSQL with logical replication enabled (`wal_level = logical`) so Debezium can read changes
 - Java runtime for Spark (if running locally)
+- On Windows: Hadoop `winutils` in `C:\hadoop\bin` (the Spark jobs set `HADOOP_HOME` to `C:\hadoop`)
 - Optionally Apache Spark installed locally for heavier workloads
 
 ---
@@ -40,21 +42,27 @@
 1. Clone the repository:
 
 ```powershell
-git clone <repo-url>
-cd "Data Lake with CDC Project"
+git clone https://github.com/eolagbaiye212-byte/delta-lake-cdc.git
+cd delta-lake-cdc
 ```
 
-2. Create and activate a Python virtual environment (recommended):
+2. Create and activate a Python virtual environment (recommended), then install dependencies:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt  # optional: add this file to pin deps
+pip install pyspark delta-spark psycopg2-binary python-dotenv faker pandas requests
 ```
 
-3. (Optional) Use the included helper virtualenv: activate `myenv\Activate.ps1` in PowerShell.
+3. Create the source database and tables by running `create_schema.sql` with `psql`. The script creates a `retail_db` database, connects to it, and builds the tables and indexes:
 
-4. Start local infrastructure (Debezium + Kafka) for CDC testing (optional):
+```powershell
+psql -U postgres -f create_schema.sql
+```
+
+4. Copy `.env.example` to `.env` and fill in your database credentials (see Configuration).
+
+5. Start local infrastructure (Kafka + Debezium):
 
 ```powershell
 cd docker_debezium_config
@@ -63,19 +71,36 @@ docker compose up -d
 
 Wait for Kafka and Debezium to be healthy before continuing (check logs with `docker compose logs -f`).
 
+6. Register the Debezium PostgreSQL connector with the Kafka Connect REST API on port 8083. The connector is not created automatically. The example below uses the `retaildb` topic prefix, which produces the topic names the Bronze job subscribes to (`retaildb.public.customers`, `retaildb.public.orders`, and so on). Replace the placeholder values with your own:
+
+```powershell
+curl.exe -X POST http://localhost:8083/connectors -H "Content-Type: application/json" -d '{
+  "name": "retaildb-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "plugin.name": "pgoutput",
+    "database.hostname": "host.docker.internal",
+    "database.port": "5432",
+    "database.user": "<DB_USER>",
+    "database.password": "<DB_PASSWORD>",
+    "database.dbname": "<DB_NAME>",
+    "topic.prefix": "retaildb",
+    "table.include.list": "public.customers,public.products,public.inventory,public.orders,public.order_items"
+  }
+}'
+```
+
+Check that it is running with `curl.exe http://localhost:8083/connectors/retaildb-connector/status`.
+
 ---
 
 ## Configuration
 
-Most configuration values are stored in the `docker_debezium_config/debezium_config.json` and environment settings in `docker-compose.yaml` for local testing. For the pipeline and Spark jobs, configuration values are read from simple constants or environment variables inside the `spark_jobs/` modules and `medallion_main.py`.
+Configuration lives in three places:
 
-Key configuration items to check before running:
-- PostgreSQL connection string (host, port, user, password, database)
-- Kafka bootstrap servers
-- Topics and Debezium connector settings
-- Local path to `delta_lake/` where Bronze/Silver/Gold folders will be written
-
-If you prefer, add a `.env` file and update the scripts to load these values using `python-dotenv`.
+- **Database credentials (`.env`):** copy `.env.example` to `.env` and set `DB_NAME`, `DB_USER`, and `DB_PASSWORD`. The data generator loads these with `python-dotenv` and connects to PostgreSQL on `localhost`.
+- **Kafka and Debezium (`docker_debezium_config/docker-compose.yaml`):** Kafka listens on port 9092 and the Kafka Connect (Debezium) REST API on port 8083. Connector settings are supplied when you register the connector (Installation, step 6).
+- **Spark jobs (`spark_jobs/`):** the Kafka bootstrap server (`localhost:9092`), the topic list, and the Delta Lake output paths are set as constants in each module. The output paths are absolute Windows paths, so update them to point at a `delta_lake/` folder on your machine before running.
 
 ---
 
@@ -84,8 +109,9 @@ If you prefer, add a `.env` file and update the scripts to load these values usi
 - `medallion_main.py` — pipeline orchestrator and example job runner
 - `data_generation/` — synthetic data generator and driver (`generate_data_main.py`, `generate_data.py`)
 - `spark_jobs/` — modules for `bronze_layer.py`, `silver_layer.py`, `gold_layer.py`
-- `delta_lake/` — example Delta-style folders (`bronze/`, `silver/`, `gold/`)
-- `docker_debezium_config/` — Debezium connector config and `docker-compose.yaml`
+- `delta_lake/` — output folders (`bronze/`, `silver/`, `gold/`), created when the pipeline runs and not tracked in the repository
+- `docker_debezium_config/` — `docker-compose.yaml` for Kafka and Debezium
+- `.env.example` — template for the database credentials in `.env`
 - `create_schema.sql` — example DDL for PostgreSQL source tables
 - `log_progress.py` — small helper for logging progress
 
@@ -128,7 +154,7 @@ Benefits:
 
 ## Usage — Running the Pipeline
 
-1. (Optional) Start Debezium and Kafka for CDC:
+1. Start Kafka and Debezium if they aren't already running (and register the connector as in Installation, step 6, if you haven't yet):
 
 ```powershell
 cd docker_debezium_config

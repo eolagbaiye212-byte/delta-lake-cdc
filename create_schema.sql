@@ -19,7 +19,7 @@ CREATE TABLE products (product_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, 
 CREATE TABLE inventory (inventory_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, product_id INT REFERENCES products(product_id), warehouse_location VARCHAR(100), quantity INT, reorder_level INT, last_restocked TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
 
 -- Orders: contains information about each order
-CREATE TABLE orders (order_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, customer_id  , order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, total_amount DECIMAL(12,2), status VARCHAR(50), shipping_address TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE orders (order_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, customer_id INT REFERENCES customers(customer_id), order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, total_amount DECIMAL(12,2), status VARCHAR(50), shipping_address TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
 
 -- Order Items: Contains information about the item in a particular order
  CREATE TABLE order_items (order_item_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, order_id INT REFERENCES orders(order_id), product_id INT REFERENCES products(product_id), quantity INT, unit_price DECIMAL(12,2), subtotal DECIMAL(12,2), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
